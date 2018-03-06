@@ -208,3 +208,6 @@ FakesAssemblies/
 
 # SubWolf 2015-07-29 Settings Not Needed
 bin/data/settings.txt
+
+# libavc
+addons/ofxAvCodec/libs/avcodec/lib/osx/**
