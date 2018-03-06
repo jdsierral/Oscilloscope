@@ -211,3 +211,4 @@ bin/data/settings.txt
 
 # libavc
 addons/ofxAvCodec/libs/avcodec/lib/osx/**
+addons/ofxAvCodec
