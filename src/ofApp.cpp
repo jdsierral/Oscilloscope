@@ -33,7 +33,6 @@ void ofApp::setup(){
 	root = new mui::Root();
 	
 	globals.player.loadSound(ofxToReadonlyDataPath("konichiwa.wav"));
-//	globals.player.loadSound(ofxToReadonlyDataPath("c:\\Users\\hansi\\Desktop\\3dbounce.wav"));
 	globals.player.setLoop(false);
 	globals.player.stop();
 	globals.player.onEnd = [&](){
@@ -151,10 +150,10 @@ void ofApp::update(){
 	
 	playlist->visible = osciView->visible && playlistEnable;
 	
-	bool anythingGoingOn = globals.player.isPlaying || exporting>0;
-	if( ofGetMousePressed() || !anythingGoingOn){
-		lastMouseMoved = lastUpdateTime;
-	}
+//    bool anythingGoingOn = globals.player.isPlaying || exporting>0;
+//    if( ofGetMousePressed() || !anythingGoingOn){
+//        lastMouseMoved = lastUpdateTime;
+//    }
 	
 	// reload settings when we went from not focused->focused state
 	if(ofGetFrameNum()%30 == 0){
@@ -174,30 +173,30 @@ void ofApp::update(){
 
 	/////////////////////////////////////////////////
 	// take care of hiding / showing the ui
-	if( lastUpdateTime-lastMouseMoved > globals.secondsBeforeHidingMenu*1000 ){
-		// this is not the greatest solution, but hey ho, it works ...
-		bool hovering = osciView->isMouseOver() || playlist->isMouseOver();
-		if( !hovering ){
-			osciView->visible = false;
-			mousePosBeforeHiding.x = ofGetMouseX();
-			mousePosBeforeHiding.y = ofGetMouseY();
-		}
-	}
+//    if( lastUpdateTime-lastMouseMoved > globals.secondsBeforeHidingMenu*1000 ){
+//        // this is not the greatest solution, but hey ho, it works ...
+//        bool hovering = osciView->isMouseOver() || playlist->isMouseOver();
+//        if( !hovering ){
+//            osciView->visible = false;
+//            mousePosBeforeHiding.x = ofGetMouseX();
+//            mousePosBeforeHiding.y = ofGetMouseY();
+//        }
+//    }
 
 	if( !applicationRunning ){
 		ofShowCursor();
 		return;
 	}
 
-	ofVec2f mousePos(ofGetMouseX(), ofGetMouseY());
-	bool insideWindow = ofRectangle(0,0,ofGetWidth(),ofGetHeight()).inside(mousePos);
-	if( lastUpdateTime-lastMouseMoved < globals.secondsBeforeHidingMenu*1000 && osciView->visible == false ){
-		bool movedEnough = mousePos.distance(mousePosBeforeHiding) > 10*mui::MuiConfig::scaleFactor;
-		if( insideWindow && movedEnough ){
-			// okay, we moved enough!
-			osciView->visible = true;
-		}
-	}
+    ofVec2f mousePos(ofGetMouseX(), ofGetMouseY());
+    bool insideWindow = ofRectangle(0,0,ofGetWidth(),ofGetHeight()).inside(mousePos);
+//    if( lastUpdateTime-lastMouseMoved < globals.secondsBeforeHidingMenu*1000 && osciView->visible == false ){
+//        bool movedEnough = mousePos.distance(mousePosBeforeHiding) > 10*mui::MuiConfig::scaleFactor;
+//        if( insideWindow && movedEnough ){
+//            // okay, we moved enough!
+//            osciView->visible = true;
+//        }
+//    }
 
 	if( osciView->visible || !insideWindow) ofShowCursor();
 	else ofHideCursor();
@@ -530,7 +529,7 @@ void ofApp::exit(){
 
 
 //----------------------------------------------------------	----
-void ofApp::keyPressed  (int key){
+void ofApp::keyPressed (int key){
 	key = std::tolower(key);
 	
 	if( key == '\t' && !configView->isVisibleOnScreen()){
