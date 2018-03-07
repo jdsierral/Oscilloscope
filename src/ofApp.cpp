@@ -81,6 +81,8 @@ void ofApp::setup(){
 	micLeft.loop = false;
 	micRight.loop = false;
 	micZMod.loop = false;
+    micLeftSurr.loop = false;
+    micRightSurr.loop = false;
 
 	
 	if( globals.autoDetect ){
@@ -99,6 +101,8 @@ void ofApp::startApplication(){
 	micLeft.playFrom(0);
 	micRight.playFrom(0);
 	micZMod.playFrom(0);
+    micLeftSurr.playFrom(0);
+    micRightSurr.playFrom(0);
 
 	configView->toGlobals();
 	globals.saveToFile();
@@ -150,11 +154,6 @@ void ofApp::update(){
 	
 	playlist->visible = osciView->visible && playlistEnable;
 	
-//    bool anythingGoingOn = globals.player.isPlaying || exporting>0;
-//    if( ofGetMousePressed() || !anythingGoingOn){
-//        lastMouseMoved = lastUpdateTime;
-//    }
-	
 	// reload settings when we went from not focused->focused state
 	if(ofGetFrameNum()%30 == 0){
 		ofAppGLFWWindow * win = dynamic_cast<ofAppGLFWWindow*>(ofGetWindowPtr());
@@ -171,41 +170,18 @@ void ofApp::update(){
 		}
 	}
 
-	/////////////////////////////////////////////////
-	// take care of hiding / showing the ui
-//    if( lastUpdateTime-lastMouseMoved > globals.secondsBeforeHidingMenu*1000 ){
-//        // this is not the greatest solution, but hey ho, it works ...
-//        bool hovering = osciView->isMouseOver() || playlist->isMouseOver();
-//        if( !hovering ){
-//            osciView->visible = false;
-//            mousePosBeforeHiding.x = ofGetMouseX();
-//            mousePosBeforeHiding.y = ofGetMouseY();
-//        }
-//    }
-
 	if( !applicationRunning ){
 		ofShowCursor();
 		return;
 	}
 
-    ofVec2f mousePos(ofGetMouseX(), ofGetMouseY());
-    bool insideWindow = ofRectangle(0,0,ofGetWidth(),ofGetHeight()).inside(mousePos);
-//    if( lastUpdateTime-lastMouseMoved < globals.secondsBeforeHidingMenu*1000 && osciView->visible == false ){
-//        bool movedEnough = mousePos.distance(mousePosBeforeHiding) > 10*mui::MuiConfig::scaleFactor;
-//        if( insideWindow && movedEnough ){
-//            // okay, we moved enough!
-//            osciView->visible = true;
-//        }
-//    }
-
-	if( osciView->visible || !insideWindow) ofShowCursor();
+	if ( osciView->visible ) ofShowCursor();
 	else ofHideCursor();
 	
 	// center the ui
 	if (osciView->sideBySide->selected && globals.player.fileType == OsciAvAudioPlayer::QUAD ) {
 		osciView->x = ofGetWidth() / mui::MuiConfig::scaleFactor * 1 / 4.0f - osciView->width / 2;
-	}
-	else {
+	} else {
 		osciView->x = ofGetWidth() / mui::MuiConfig::scaleFactor / 2 - osciView->width / 2;
 	}
 	osciView->y = ofGetHeight() / mui::MuiConfig::scaleFactor - osciView->height - 60;
@@ -277,23 +253,38 @@ void ofApp::update(){
 	
 	changed = false;
 	mesh.clear();
-	mesh2.clear();
+    if (micChannels == 4) mesh2.clear();
 	
 	int bufferSize = (exporting==0?2048:256);
 	static float * leftBuffer = new float[2048];
 	static float * rightBuffer = new float[2048];
+    static float * leftSurrBuffer;
+    static float * rightSurrBuffer;
+    
+    if (micChannels == 4) {
+        leftSurrBuffer = new float[2048];
+        rightSurrBuffer = new float[2048];
+    }
+    
 	static float * zmodBuffer = new float[2048];
 
+    //    ping hue
 	// party mode
-	//globals.hue += ofGetMouseX()*100/ofGetWidth();
-	//globals.hue = fmodf(globals.hue,360);
+    globals.hue = 360.0 * ofGetMouseX()/ofGetWidth();
+	
 	
 	MonoSample &left = globals.micActive?micLeft:globals.player.left192;
 	MonoSample &right = globals.micActive?micRight:globals.player.right192;
 	MonoSample &zMod = globals.micActive?micZMod:globals.player.zMod192;
+    MonoSample &leftSurr = globals.micActive && micChannels == 4 ? micLeftSurr : globals.player.zMod192;
+    MonoSample &rightSurr = globals.micActive && micChannels == 4 ? micRightSurr : globals.player.zMod192;
 	
 	left.playFrom(0);
 	right.playFrom(0);
+    if (micChannels == 4) {
+        leftSurr.playFrom(0);
+        rightSurr.playFrom(0);
+    }
 	zMod.playFrom(0);
 	
 	bool isMono =
@@ -303,6 +294,8 @@ void ofApp::update(){
 		(!globals.micActive && globals.player.fileType == OsciAvAudioPlayer::STEREO_ZMODULATED) ||
 		(globals.micActive && micChannels == 3);
 	bool isQuad = !globals.micActive && globals.player.fileType == OsciAvAudioPlayer::QUAD;
+    
+    isQuad = (isQuad || micChannels == 4);
 	
 	osciView->sideBySide->visible = isQuad; 
 	osciView->flip3d->visible = isQuad;
@@ -346,18 +339,18 @@ void ofApp::update(){
 					left.copyTo(leftBuffer, 1, bufferSize);
 					right.copyTo(rightBuffer, 1, bufferSize);
 				}
-			
-				int stride = isQuad ? 2 : 1;
+                int stride = 1;
 				
 				float * zBuffer = nullptr;
-				if(isZModulated && globals.zModulation){
-					zMod.copyTo(zmodBuffer,1,bufferSize);
-					zBuffer = zmodBuffer; 
-				}
 					
 				mesh.addLines(leftBuffer, rightBuffer, zBuffer, bufferSize, stride);
 				if(isQuad){
-					mesh2.addLines(leftBuffer+1, rightBuffer+1, zBuffer, bufferSize, stride);
+                    leftSurr.copyTo(leftSurrBuffer, 1, bufferSize);
+                    rightSurr.copyTo(rightSurrBuffer, 1, bufferSize);
+//                    mesh2.addLines(leftBuffer+1, rightBuffer+1, zBuffer, bufferSize, stride);
+                    mesh2.addLines(leftSurrBuffer, rightSurrBuffer, zBuffer, bufferSize, stride);
+                    leftSurr.peel(bufferSize);
+                    rightSurr.peel(bufferSize);
 				}
 				
 				left.peel(bufferSize);
@@ -413,7 +406,7 @@ void ofApp::draw(){
 		
 		bool sideBySide = osciView->sideBySide->selected;
 		bool flip3d = osciView->flip3d->selected;
-		ofMatrix4x4 viewMatrix = getViewMatrix(flip3d?1:0,globals.player.fileType == OsciAvAudioPlayer::QUAD);
+		ofMatrix4x4 viewMatrix = getViewMatrix(flip3d ? 1 : 0, (globals.player.fileType == OsciAvAudioPlayer::QUAD) || micChannels == 4);
 		ofFloatColor color = ofFloatColor::fromHsb(globals.hue/360.0, 1, 1);
 
 		mesh.uSize = globals.strokeWeight/1000.0;
@@ -426,13 +419,13 @@ void ofApp::draw(){
 		//mesh.uRgb = ofVec3f(1, 1, 1); 
 		mesh.draw(viewMatrix);
 		
-		if(mesh2.mesh.getNumVertices() > 0){
+		if(mesh2.mesh.getNumVertices() > 0 && micChannels == 4){
 			mesh2.uSize = mesh.uSize;
 			mesh2.uIntensityBase = mesh.uIntensityBase;
 			mesh2.uIntensity = mesh.uIntensity;
 			mesh2.uHue = globals.hue;
 			mesh2.uRgb = sideBySide ? mesh.uRgb : (flip3d ? ofVec3f(1, 0, 0) : ofVec3f(0, 1, 1));
-			if(sideBySide) viewMatrix = getViewMatrix(flip3d?0:1,globals.player.fileType == OsciAvAudioPlayer::QUAD);
+			if(sideBySide) viewMatrix = getViewMatrix(flip3d?0:1,globals.player.fileType == OsciAvAudioPlayer::QUAD || micChannels == 4);
 			mesh2.draw(viewMatrix);
 		}
 		
@@ -646,6 +639,11 @@ void ofApp::audioIn(float * input, int bufferSize, int nChannels){
 				micRight.append(input+1,bufferSize,3);
 				micZMod.append(input+2,bufferSize,3);
 				break;
+            case 4:
+                micLeft.append(input, bufferSize, 4);
+                micRight.append(input+1, bufferSize, 4);
+                micLeftSurr.append(input+2, bufferSize, 4);
+                micRightSurr.append(input+3, bufferSize, 4);
 			default: // wtf :D
 				micLeft.append(input, bufferSize,nChannels);
 				micRight.append(input+1,bufferSize,nChannels);
@@ -693,6 +691,7 @@ void ofApp::gotMessage(ofMessage msg){
 		auto devs = micStream.getDeviceList();
 		numChannels = max(numChannels,1);
 		numChannels = min(numChannels,(int)devs[globals.micDeviceId].inputChannels);
+        numChannels = micChannels;
 		
 		globals.player.stop();
 		

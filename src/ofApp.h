@@ -56,6 +56,8 @@ class ofApp : public ofBaseApp{
 		int micChannels = 2;
 		MonoSample micLeft;
 		MonoSample micRight;
+        MonoSample micLeftSurr;
+        MonoSample micRightSurr;
 		MonoSample micZMod;
 	
 		bool changed;
